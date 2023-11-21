@@ -19,4 +19,13 @@ The datasets are included in `data/`. There are two files:
 * `BAKE_qa.json`: the counterfactual dataset use both question answering and judgment forms for the evaluation of reversibility, which use one-to-one and one-to-many relations.
 * `BAKE_judge.json`: the counterfactual dataset only use judgment form for the evaluation of reversibility, which use many-to-one and many-to-many relations.
 
-Besides,  we split the two datasets into a train set and a validate set to train hypernetwork for MEND method, included in `data/bi/`
+Besides,  we split the two datasets into a train set and a validate set to train the hypernetwork for MEND method, included in `data/bi/`. 
+The whole data directory is as follows:
+```bash
+data/
+    |__ BAKE_qa.json
+    |__ BAKE_judge.json
+    |__ bi/
+        |__ bi_train.json
+        |__ bi_val.json
+```
