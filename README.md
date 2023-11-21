@@ -12,4 +12,5 @@ We also propose a method BIRD, which mitigates the reversal curse in model editi
 ![Image text](https://github.com/mjy1111/BAKE/blob/main/definition.png)
 
 
-## Evaluation
+## Datasets
+The BAKE benchmark comprises two datasets of BAKE-Q&J and BAKE-J. Both datasets are designed for evaluating counterfactual edits in LLMs. When assess the reversibility of LLMs, two evaluation forms of question answering (Q) and judgment (J) are considered.
