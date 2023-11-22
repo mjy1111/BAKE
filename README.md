@@ -9,7 +9,7 @@ This paper study **bidirectional** language model editing, introduing a new eval
 
 We also propose a method BIRD, which mitigates the reversal curse in model editing.
 
-<img src="[https://github.com/mjy1111/BAKE/blob/main/definition.png]" width="400">
+<img src="https://github.com/mjy1111/BAKE/blob/main/definition.png" width="400">
 
 ## Datasets
 The BAKE benchmark comprises two datasets of BAKE-Q&J and BAKE-J. Both datasets are designed for evaluating counterfactual edits in LLMs. When assess the reversibility of LLMs, two evaluation forms of question answering (Q) and judgment (J) are considered for different relations.
