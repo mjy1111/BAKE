@@ -83,6 +83,19 @@ run:
 ```bash
 python trainer.py
 ```
-
-
+## Citation
+If you use this code and dataset, please cite our paper:
+```bibtex
+@article{DBLP:journals/corr/abs-2310-10322,
+  author       = {Jun{-}Yu Ma and
+                  Jia{-}Chen Gu and
+                  Zhen{-}Hua Ling and
+                  Quan Liu and
+                  Cong Liu},
+  title        = {Untying the Reversal Curse via Bidirectional Language Model Editing},
+  journal      = {CoRR},
+  year         = {2023},
+  url          = {https://doi.org/10.48550/arXiv.2310.10322},
+}
+```
 
