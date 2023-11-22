@@ -30,6 +30,26 @@ data/
 ```
 You can download these datasets here. [[Google Drive]](https://drive.google.com/file/d/1HUH4bggk4h01gRxz6arsIbL-mUMj6Ibz/view?usp=sharing).
 
+
+## Prepare the environment
+
+### Requirements
+
+**Note: Please use Python 3.9+**
+To get started, simply install conda and run:
+
+```shell
+git clone https://github.com/mjy1111/BAKE.git
+conda create -n EasyEdit python=3.9.7
+...
+pip install -r requirements.txt
+```
+
+### Models
+All models are putted in `hugging_cache/<model_name>` (model_name=gpt2-xl, gpt-j-6B, llama-7b, or llama2-7b).
+These could be changed in `hparams/<method_name>/`.
+
+
 ## Evaluation
 The performance of knowledge editing is measured from these dimensions:
 
