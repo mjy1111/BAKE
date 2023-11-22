@@ -28,6 +28,7 @@ data/
         |__ bi_train.json
         |__ bi_val.json
 ```
+You can download these datasets here. [[Google Drive]](https://drive.google.com/file/d/1HUH4bggk4h01gRxz6arsIbL-mUMj6Ibz/view?usp=sharing).
 
 ## Evaluation
 The performance of knowledge editing is measured from these dimensions:
