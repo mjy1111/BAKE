@@ -2,7 +2,7 @@
 This is the repository for our paper: Untying the Reversal Curse via Bidirectional Language Model Editing ([arxiv](https://arxiv.org/pdf/2310.10322.pdf)).
 
 ## Overview
-**Knowledge editing** aims to adjust an initial base model's $(f_\theta)$ behavior($x_e \rightarrow y_e$) on the particular edit descriptor $[x_e, y_e]$ efficiently.
+**Model editing** aims to adjust an initial base model's $(f_\theta)$ behavior($x_e \rightarrow y_e$) on the particular edit descriptor $[x_e, y_e]$ efficiently.
 Previous editing and evaluation approaches operate under the **unidirectional** paradigm following only the direction being edited.
 
 This paper study **bidirectional** language model editing, introduing a new evaluation metric of **reversibility** and a new benchmark **BAKE** to assess if edited LLMs can accurately recall the editing knowledge bidirectionally.
@@ -38,6 +38,14 @@ The performance of knowledge editing is measured from these dimensions:
 - `Reversibility`: the effectiveness of edited models in recalling the editing knowledge under reverse prompts.
 
 GPT-2 XL (1.5B), GPT-J (6B), LLaMA-1 (7B) and LLaMA-2 (7B) are used for editing.
+
+- These model editing methods are used in our paper as follows:
+  - [FT](https://github.com/kmeng01/rome): Fine-Tuning with $L_\infty$ constraint
+  - [MEND](https://github.com/eric-mitchell/mend): Mitchell et al. Hypernetwork
+  - [KN](https://github.com/Hunter-DDM/knowledge-neurons): Damai Dai et al. Locate then Edit
+  - [ROME](https://github.com/kmeng01/rome): Kevin Meng et al. Locate and Edit
+  - [MEMIT](https://github.com/kmeng01/memit): Kevin Meng et al. Locate and Edit
+
 
 ### Running the evaluation
 
