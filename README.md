@@ -100,3 +100,13 @@ If you use this code and dataset, please cite our paper:
 }
 ```
 
+### Related Projects
+- [EasyEdit](https://github.com/zjunlp/EasyEdit)
+- [ROME](https://github.com/kmeng01/rome)
+- [FastEdit](https://github.com/hiyouga/FastEdit)
+
+We express our sincere gratitude to [EasyEdit](https://github.com/zjunlp/EasyEdit) and [ROME](https://github.com/kmeng01/rome), as we have utilized portions of their source code in our project.
+
+
+
+
