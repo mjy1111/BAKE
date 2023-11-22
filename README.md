@@ -49,7 +49,7 @@ GPT-2 XL (1.5B), GPT-J (6B), LLaMA-1 (7B) and LLaMA-2 (7B) are used for editing.
 
 ### Running the evaluation
 
-To get started (e.g. using FT on GPT-2 XL), run:
+To get started (e.g. using FT to edit GPT-2 XL on BAKE-Q&J dataset), run:
 ```bash
 python bir.py \
     --alg_name=FT \
@@ -71,8 +71,9 @@ python bir.py \
     --beta=0.8 \
     --dataset_size=100 (optional)
 ```
-Results from each run are stored at `results/<data_name>/<method_name>/run_<run_id>`
-All params are in the `hparams/<method_name>/` and you can change them as needed.
+Results from each run are stored at `results/<data_name>/<method_name>/run_<run_id>`.
+
+All params are in the `hparams/<method_name>/`, and you can change them as needed.
 
 ### Trainer
 To use the MEND method, you should firstly train a hypernetwork using the data in `data/bi/`, and these weights would be saved in `data/weights/MEND/models/`.
