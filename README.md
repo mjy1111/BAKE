@@ -43,7 +43,7 @@ GPT-2 XL (1.5B), GPT-J (6B), LLaMA-1 (7B) and LLaMA-2 (7B) are used for editing.
 
 To get started (e.g. using FT on GPT-2 XL), run:
 ```bash
-python3 bir.py \
+python bir.py \
     --alg_name=FT \
     --model_name=gpt2-xl \
     --ds_name=bi_cf_qa \
@@ -54,7 +54,7 @@ python3 bir.py \
 If use the proposed BIRD, run:
 
 ```bash
-python3 bir.py \
+python bir.py \
     --alg_name=ROME \
     --model_name=gpt2-xl \
     --ds_name=bi_cf_qa \
@@ -65,6 +65,14 @@ python3 bir.py \
 ```
 Results from each run are stored at `results/<data_name>/<method_name>/run_<run_id>`
 
+### Trainer
+To use the MEND method, you should firstly train a hypernetwork using the data in `data/bi/`, and these weights would be saved in `data/weights/MEND/models/`.
+Then use the same steps above to edit models.
+run:
+
+```bash
+python trainer.py
+```
 
 
 
