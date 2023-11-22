@@ -72,6 +72,7 @@ python bir.py \
     --dataset_size=100 (optional)
 ```
 Results from each run are stored at `results/<data_name>/<method_name>/run_<run_id>`
+All params are in the `hparams/<method_name>/` and you can change them as needed.
 
 ### Trainer
 To use the MEND method, you should firstly train a hypernetwork using the data in `data/bi/`, and these weights would be saved in `data/weights/MEND/models/`.
