@@ -28,3 +28,23 @@ data/
         |__ bi_train.json
         |__ bi_val.json
 ```
+
+## Evaluation
+The performance of knowledge editing is measured from these dimensions:
+
+- `Efficacy`: whether the edited models could recall the exact editing fact under editing prompts
+- `Generalization`: whether the edited models could recall the editing fact under paraphrase prompts
+- `Locality`: whether the output of the edited models for inputs out of editing scope remains unchanged after editing
+- `Reversibility`: the effectiveness of edited models in recalling the editing knowledge under reverse prompts.
+
+GPT-2 XL (1.5B), GPT-J (6B), LLaMA-1 (7B) and LLaMA-2 (7B) are used for editing.
+
+
+
+
+
+
+
+
+
+
