@@ -1,5 +1,5 @@
 # BAKE
-This is the repository for our paper: Untying the Reversal Curse via Bidirectional Language Model Editing ([arxiv](https://arxiv.org/pdf/2310.10322.pdf))
+This is the repository for our paper: Untying the Reversal Curse via Bidirectional Language Model Editing ([arxiv](https://arxiv.org/pdf/2310.10322.pdf)).
 
 ## Overview
 **Knowledge editing** aims to adjust an initial base model's $(f_\theta)$ behavior($x_e \rightarrow y_e$) on the particular edit descriptor $[x_e, y_e]$ efficiently.
@@ -39,11 +39,31 @@ The performance of knowledge editing is measured from these dimensions:
 
 GPT-2 XL (1.5B), GPT-J (6B), LLaMA-1 (7B) and LLaMA-2 (7B) are used for editing.
 
+### Running the evaluation
 
+To get started (e.g. using FT on GPT-2 XL), run:
+```bash
+python3 bir.py \
+    --alg_name=FT \
+    --model_name=gpt2-xl \
+    --ds_name=bi_cf_qa \
+    --cuda=0 \
+    --dataset_size=100 (optional)
+```
 
+If use the proposed BIRD, run:
 
-
-
+```bash
+python3 bir.py \
+    --alg_name=ROME \
+    --model_name=gpt2-xl \
+    --ds_name=bi_cf_qa \
+    --cuda=0 \
+    --aerfa=0.0005 \
+    --beta=0.8 \
+    --dataset_size=100 (optional)
+```
+Results from each run are stored at `results/<data_name>/<method_name>/run_<run_id>`
 
 
 
