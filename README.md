@@ -103,6 +103,8 @@ Run:
 ```bash
 python trainer.py
 ```
+You can also download these weights here. [[Google Drive]](https://drive.google.com/file/d/1o9uJUEXExda5M-kyvvyFZ3yAC9tmW9gx/view?usp=drive_link).
+
 ## Citation
 If you use this code and dataset, please cite our paper:
 ```bibtex
