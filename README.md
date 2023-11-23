@@ -99,7 +99,7 @@ All params are in the `hparams/<method_name>/`, and you can change them as neede
 ### Trainer
 To use the MEND method, you should firstly train a hypernetwork using the data in `data/bi/`, and these weights would be saved in `data/weights/models/MEND/`.
 Then use the same steps above to edit models.
-run:
+Run:
 
 ```bash
 python trainer.py
