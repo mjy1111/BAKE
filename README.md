@@ -118,7 +118,7 @@ If you use this code and dataset, please cite our paper:
   url          = {https://doi.org/10.48550/arXiv.2310.10322},
 }
 ```
-### Bugs or Questions?
+### Questions?
 If you have any questions related to the repository or the paper, or you encounter any problems when using the datasets/code, feel free to email Junyu Ma `(mjy1999@mail.ustc.edu.cn)` or open an issue!
 
 
