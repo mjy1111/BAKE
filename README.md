@@ -69,8 +69,7 @@ GPT-2 XL (1.5B), GPT-J (6B), LLaMA-1 (7B) and LLaMA-2 (7B) are used for editing.
 
 
 ### Running the evaluation
-
-To get started (e.g. using FT to edit GPT-2 XL on BAKE-Q&J dataset), run:
+After downloading the datasets and models, to get started (e.g. using FT to edit GPT-2 XL on BAKE-Q&J dataset), run:
 ```bash
 python bir.py \
     --alg_name=FT \
