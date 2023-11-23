@@ -84,7 +84,7 @@ If use the proposed BIRD, run:
 
 ```bash
 python bir.py \
-    --alg_name=ROME \
+    --alg_name=BIRD \
     --model_name=gpt2-xl \
     --ds_name=bi_cf_qa \
     --cuda=0 \
