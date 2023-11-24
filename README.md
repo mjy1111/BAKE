@@ -40,7 +40,7 @@ To get started, simply install conda and run:
 
 ```shell
 git clone https://github.com/mjy1111/BAKE.git
-conda create -n EasyEdit python=3.9.7
+conda create -n BAKE python=3.9.7
 ...
 pip install -r requirements.txt
 ```
