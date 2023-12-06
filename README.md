@@ -93,6 +93,12 @@ python bir.py \
 ```
 Results from each run are stored at `results/<data_name>/<method_name>/run_<run_id>`.
 
+To summarize the results (e.g. using ROME to edit GPT-2 XL on BAKE-Q&J dataset), run:
+
+```bash
+python -m experiments.summarize  --dir_name=bi_cf_qa/ROME/gpt2-xl
+```
+
 All params are in the `hparams/<method_name>/`, and you can change them as needed.
 
 ### Trainer
