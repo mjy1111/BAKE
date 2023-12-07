@@ -9,7 +9,7 @@ from ..rome import repr_tools
 from ...util import nethook
 
 from .rome_hparams import ROMEHyperParams
-from const import relationid_words
+from .const import relationid_words
 
 
 def locate_tokenize(model_name, tok, requests_reverse,subject):
