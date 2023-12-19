@@ -89,11 +89,11 @@ def main(
                         print(1)
                         continue
                     #filter
-                    '''
+
                     y=data["pre"][key][0]
                     if y["target_true"] > y["target_new"]:
                         continue
-                    '''
+
 
                     cur_sum[sum_key_discrete].append(
                         np.mean(
