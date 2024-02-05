@@ -2,7 +2,7 @@ import collections
 import json
 from pprint import pprint
 from typing import List, Optional
-
+import math
 import numpy as np
 from scipy.stats import hmean
 from pathlib import Path
@@ -29,7 +29,7 @@ def main(
         files = list(run_dir.glob("*case_*.json"))
         files.sort(key=lambda x: int(str(x).split("_")[-1].split(".")[0]))
         #print(files)
-        print(len(files))
+        #print(len(files))
         for case_file in files[:]:
             try:
                 with open(case_file, "r") as f:
@@ -50,15 +50,27 @@ def main(
                 for key in ["rewrite_prompts_probs", "paraphrase_prompts_probs"]:
                     if prefix not in data or key not in data[prefix]:
                         continue
+                    #print(data[prefix][key], math.isnan(data[prefix][key][0]["target_new"]))
                     
 
                     sum_key_discrete = f"{prefix}_{key.split('_prompts')[0]}_success"
                     sum_key_cont = f"{prefix}_{key.split('_prompts')[0]}_diff"
+                    
+                    
+                    label=0
 
                     if data[prefix][key]==[]:
                         continue
+                    
+                    else:
+                        for da in data[prefix][key]:
+                            if math.isnan(da["target_new"])==True or math.isnan(da["target_true"])==True:
+                                label=1
+                                break
 
-
+                    if label==1:
+                        continue
+                    
                     cur_sum[sum_key_discrete].append(
                         np.mean(
                             [
@@ -85,10 +97,22 @@ def main(
                     sum_key_discrete = f"{prefix}_{key.split('_prompts')[0]}_success"
                     sum_key_cont = f"{prefix}_{key.split('_prompts')[0]}_diff"
 
+                    label=0
+
                     if data[prefix][key]==[]:
-                        print(1)
                         continue
-                    #filter
+                    
+                    else:
+                        for da in data[prefix][key]:
+                            if math.isnan(da["target_new"])==True or math.isnan(da["target_true"])==True:
+                                label=1
+                                break
+
+                    if label==1:
+                        continue
+                    
+                    
+                    ##filter
 
                     y=data["pre"][key][0]
                     if y["target_true"] > y["target_new"]:
@@ -116,12 +140,22 @@ def main(
                 for key in ["reverse_judge_prompts_probs"]:
                     if prefix not in data or key not in data[prefix]:
                         continue
-                    
 
                     sum_key_discrete = f"{prefix}_{key.split('_prompts')[0]}_success"
                     sum_key_cont = f"{prefix}_{key.split('_prompts')[0]}_diff"
 
+                    label=0
+
                     if data[prefix][key]==[]:
+                        continue
+                    
+                    else:
+                        for da in data[prefix][key]:
+                            if math.isnan(da["target_new"])==True or math.isnan(da["target_true"])==True:
+                                label=1
+                                break
+
+                    if label==1:
                         continue
 
                     #filter
@@ -129,27 +163,6 @@ def main(
                     x=data["pre"][key][0]
                     if x["target_true"] > x["target_new"]:
                         continue
-                    '''
-
-                    if "gpt2-xl" in dir_name:
-                        x=data["pre"][key][0]
-                        if x["target_true"] > x["target_new"]:
-                            continue
-
-                    elif "llama-7b" in dir_name:
-                        x=data["pre"][key][0]
-                        if x["target_true"] > x["target_new"]:
-                            continue
-                    elif "gpt-j-6B" in dir_name:
-                        x=data["pre"][key][0]
-                        if x["target_true"] > x["target_new"]:
-                            continue
-                    elif "llama2-7b" in dir_name:
-                        x=data["pre"][key][0]
-                        if x["target_true"] > x["target_new"]:
-                            continue
-                    '''
-                    
                     
                     for x in data[prefix][key]:
                         cur_sum[sum_key_discrete].append(
@@ -174,6 +187,16 @@ def main(
                 sum_key_cont = f"{prefix}_neighborhood_diff"
                 key = "neighborhood_prompts_probs"
                 if prefix in data and key in data[prefix]:
+
+
+                    for da in data[prefix][key]:
+                        if math.isnan(da["target_new"])==True or math.isnan(da["target_true"])==True:
+                            label=1
+                            break
+                    if label==1:
+                        continue
+
+
                     cur_sum[sum_key_discrete].append(
                         np.mean(
                             [
@@ -191,20 +214,6 @@ def main(
                         )
                     )
 
-                # Accuracy-based evaluation metrics
-                for key in ["rewrite", "paraphrase", "neighborhood"]:
-                    sum_key = f"{prefix}_{key}_acc"
-                    key = f"{key}_prompts_correct"
-
-                    if prefix not in data or key not in data[prefix]:
-                        continue
-
-                    cur_sum[sum_key].append(np.mean(data[prefix][key]))
-
-                # Generation metrics that can be directly averaged
-                for key in ["ngram_entropy", "reference_score", "essence_score"]:
-                    if prefix in data and key in data[prefix]:
-                        cur_sum[f"{prefix}_{key}"].append(data[prefix][key])
 
         '''
         for i in cur_sum:
@@ -231,34 +240,70 @@ def main(
             if all(exclude not in k for exclude in ["essence_score", "time"]):
                 # Constant multiplication scales linearly with mean and stddev
                 cur_sum[k] = tuple(np.around(z * 100, 2) for z in v)
-
-        for prefix in ["pre", "post"]:
-            for k_efficacy, k_generalization, k_specificity in [
-                (
-                    f"{prefix}_rewrite_success",
-                    f"{prefix}_paraphrase_success",
-                    f"{prefix}_neighborhood_success",
-                ),
-                # (
-                #     f"{prefix}_rewrite_acc",
-                #     f"{prefix}_paraphrase_acc",
-                #     f"{prefix}_neighborhood_acc",
-                # ),
-            ]:
-                if all(k in cur_sum for k in [k_efficacy, k_generalization, k_specificity]):
-                    hmean_list = [
-                        cur_sum[k_efficacy][0],
-                        cur_sum[k_generalization][0],
-                        cur_sum[k_specificity][0],
-                    ]
-
-                    # if f"{prefix}_ngram_entropy" in cur_sum:
-                    #     hmean_list.append(2 ** (cur_sum[f"{prefix}_ngram_entropy"][0] / 100))
-                    # if f"{prefix}_reference_score" in cur_sum:
-                    #     hmean_list.append(cur_sum[f"{prefix}_reference_score"][0])
-
-                    cur_sum[f"{prefix}_score"] = (hmean(hmean_list), np.nan)
-                    break
+        
+        if "judge" in dir_name:
+            for prefix in ["pre", "post"]:
+                for k_efficacy, k_generalization, k_specificity,k_judge in [
+                    (
+                        f"{prefix}_rewrite_success",
+                        f"{prefix}_paraphrase_success",
+                        f"{prefix}_neighborhood_success",
+                        f"{prefix}_reverse_judge_success",
+                    ),
+                    # (
+                    #     f"{prefix}_rewrite_acc",
+                    #     f"{prefix}_paraphrase_acc",
+                    #     f"{prefix}_neighborhood_acc",
+                    # ),
+                ]:
+                    if all(k in cur_sum for k in [k_efficacy, k_generalization, k_specificity,k_judge]):
+                        hmean_list = [
+                            cur_sum[k_efficacy][0],
+                            cur_sum[k_generalization][0],
+                            cur_sum[k_specificity][0],
+                            cur_sum[k_judge][0],
+                        ]
+    
+                        # if f"{prefix}_ngram_entropy" in cur_sum:
+                        #     hmean_list.append(2 ** (cur_sum[f"{prefix}_ngram_entropy"][0] / 100))
+                        # if f"{prefix}_reference_score" in cur_sum:
+                        #     hmean_list.append(cur_sum[f"{prefix}_reference_score"][0])
+    
+                        cur_sum[f"{prefix}_score"] = (hmean(hmean_list), np.nan)
+                        break
+        if "qa" in dir_name:
+            for prefix in ["pre", "post"]:
+                for k_efficacy, k_generalization, k_specificity, k_qa, k_judge,in [
+                    (
+                        f"{prefix}_rewrite_success",
+                        f"{prefix}_paraphrase_success",
+                        f"{prefix}_neighborhood_success",
+                        f"{prefix}_reverse_qa_success",
+                        f"{prefix}_reverse_judge_success",
+                    ),
+                    # (
+                    #     f"{prefix}_rewrite_acc",
+                    #     f"{prefix}_paraphrase_acc",
+                    #     f"{prefix}_neighborhood_acc",
+                    # ),
+                ]:
+                    if all(k in cur_sum for k in [k_efficacy, k_generalization, k_specificity, k_qa, k_judge]):
+                        
+                        reverse= (cur_sum[k_qa][0] + cur_sum[k_judge][0])/2
+                        hmean_list = [
+                            cur_sum[k_efficacy][0],
+                            cur_sum[k_generalization][0],
+                            cur_sum[k_specificity][0],
+                            reverse
+                        ]
+    
+                        # if f"{prefix}_ngram_entropy" in cur_sum:
+                        #     hmean_list.append(2 ** (cur_sum[f"{prefix}_ngram_entropy"][0] / 100))
+                        # if f"{prefix}_reference_score" in cur_sum:
+                        #     hmean_list.append(cur_sum[f"{prefix}_reference_score"][0])
+    
+                        cur_sum[f"{prefix}_score"] = (hmean(hmean_list), np.nan)
+                        break
 
         cur_sum.update(metadata)
         pprint(cur_sum)
