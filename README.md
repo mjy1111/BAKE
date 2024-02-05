@@ -101,6 +101,8 @@ python -m experiments.summarize  --dir_name=bi_cf_qa/ROME/gpt2-xl
 
 All params are in the `hparams/<method_name>/`, and you can change them as needed.
 
+For ROME and MEMIT, we also provide Wikipedia stats [[Google Drive]](https://drive.google.com/file/d/1XIpe2x013fiCUqLeTah7wG9anLfHE3CY/view?usp=sharing).
+
 ### Trainer
 To use the MEND method, you should firstly train a hypernetwork using the data in `data/bi/`, and these weights would be saved in `data/weights/models/MEND/`.
 Then use the same steps above to edit models.
