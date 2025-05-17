@@ -27,7 +27,7 @@ data/
         |__ bi_train.json
         |__ bi_val.json
 ```
-You can download these datasets here. [[Google Drive]](https://drive.google.com/file/d/1HUH4bggk4h01gRxz6arsIbL-mUMj6Ibz/view?usp=sharing).
+You can download these datasets here. [[Huggingface]](https://huggingface.co/datasets/jym7/BAKE).
 
 
 ## Prepare the environment
@@ -45,7 +45,7 @@ pip install -r requirements.txt
 ```
 
 ### Models
-All models are putted in `hugging_cache/<model_name>` (model_name=gpt2-xl, gpt-j-6B, llama-7b, or llama2-7b).
+All models are putted in `hugging_cache/<model_name>` (model_name=gpt2-xl, gpt-j-6B, llama-7b, or llama3-8b,...).
 These could be changed in `hparams/<method_name>/`.
 
 
@@ -78,18 +78,7 @@ python bir.py \
     --dataset_size=100 (optional)
 ```
 
-If use the proposed BIRD, run:
 
-```bash
-python bir.py \
-    --alg_name=BIRD \
-    --model_name=gpt2-xl \
-    --ds_name=bi_cf_qa \
-    --cuda=0 \
-    --aerfa=0.0005 \
-    --beta=0.8 \
-    --dataset_size=100 (optional)
-```
 Results from each run are stored at `results/<data_name>/<method_name>/run_<run_id>`.
 
 To summarize the results (e.g. using ROME to edit GPT-2 XL on BAKE-Q&J dataset), run:
@@ -112,31 +101,7 @@ python trainer.py
 ```
 You can also download these weights here. [[Google Drive]](https://drive.google.com/file/d/1o9uJUEXExda5M-kyvvyFZ3yAC9tmW9gx/view?usp=drive_link).
 
-## Citation
-If you use this code and dataset, please cite our paper:
-```bibtex
-@article{DBLP:journals/corr/abs-2310-10322,
-  author       = {Jun{-}Yu Ma and
-                  Jia{-}Chen Gu and
-                  Zhen{-}Hua Ling and
-                  Quan Liu and
-                  Cong Liu},
-  title        = {Untying the Reversal Curse via Bidirectional Language Model Editing},
-  journal      = {CoRR},
-  year         = {2023},
-  url          = {https://doi.org/10.48550/arXiv.2310.10322},
-}
-```
-### Questions?
-If you have any questions related to the repository or the paper, or you encounter any problems when using the datasets/code, feel free to email Junyu Ma `(mjy1999@mail.ustc.edu.cn)` or open an issue!
 
-
-### Related Projects
-- [EasyEdit](https://github.com/zjunlp/EasyEdit)
-- [ROME](https://github.com/kmeng01/rome)
-- [FastEdit](https://github.com/hiyouga/FastEdit)
-
-We express sincere gratitude to [EasyEdit](https://github.com/zjunlp/EasyEdit) and [ROME](https://github.com/kmeng01/rome), as we have utilized portions of their source code in our project.
 
 
 
