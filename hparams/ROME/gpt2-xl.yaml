@@ -1,6 +1,6 @@
 alg_name: "ROME"
-model_name: "hugging_cache/gpt2-xl"
-stats_dir: "data_stat/stats"
+model_name: "./hugging_cache/gpt2-xl"
+stats_dir: "./data/stats"
 device: 0
 layers: [17]
 fact_token: "subject_last"
@@ -21,5 +21,7 @@ lm_head_module: "transformer.wte"
 mom2_dataset: "wikipedia"
 mom2_n_samples: 100000
 mom2_dtype: "float32"
-mom2_adjustment: true
+model_parallel: false
+fp16: false
+
 

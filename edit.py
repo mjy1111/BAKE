@@ -1,13 +1,18 @@
-import hydra
 from easyeditor import BaseEditor
 from easyeditor import KNHyperParams, FTHyperParams, KETrainingHparams,\
     ROMEHyperParams, MEMITHyperParams, MENDTrainingHparams, MENDHyperParams, \
-    SERACTrainingHparams, SERACHparams, IKEHyperParams, FTApiHyperParams
-from easyeditor import ZsreDataset, CounterFactDataset
+    SERACTrainingHparams, SERACHparams, IKEHyperParams, FTApiHyperParams, LoRAHyperParams, QLoRAHyperParams, \
+    GraceHyperParams, PMETHyperParams,MELOHyperParams, MALMENTrainingHparams, MALMENHyperParams, WISEHyperParams, R_ROMEHyperParams, EMMETHyperParams, \
+    DeepEditApiHyperParams, DPOHyperParams
+
+from easyeditor import ZsreDataset, CounterFactDataset, KnowEditDataset
 from easyeditor import EditTrainer
 from easyeditor.models.ike import encode_ike_facts
 from sentence_transformers import SentenceTransformer
-
+import math
+import random
+import os
+import json
 
 def test_KE():
     prompts = ['Who is the architect for Toodyay Fire Station?', 'Who is Claire Clairmont\'s sister?',
@@ -24,6 +29,7 @@ def test_KE():
 
     return metrics, edited_model
 
+
 def test_KN():
     prompts = ['Who is the architect for Toodyay Fire Station?', 'Who is Claire Clairmont\'s sister?',
                'Which fictional universe is Chlorophyll Kid part of?']
@@ -38,6 +44,7 @@ def test_KN():
     )
 
     return metrics, edited_model
+
 
 def test_KN_GPTJ():
     prompts = ['Who is the architect for Toodyay Fire Station?', 'Who is Claire Clairmont\'s sister?',
@@ -74,6 +81,7 @@ def test_FT():
 
     return metrics, edited_model
 
+
 def test_FT_GPTJ():
     prompts = ['Who is the architect for Toodyay Fire Station?', 'Who is Claire Clairmont\'s sister?',
                'Which fictional universe is Chlorophyll Kid part of?']
@@ -93,6 +101,7 @@ def test_FT_GPTJ():
 
     return metrics, edited_model
 
+
 def test_ZsreDataSet_Edit():
 
     hparams = FTHyperParams.from_hparams('./hparams/FT/gpt2-xl')
@@ -101,6 +110,7 @@ def test_ZsreDataSet_Edit():
     metrics, edited_model, _ = editor.edit_dataset(ds)
 
     return metrics, edited_model
+
 
 def test_CounterfactDataSet_Edit():
 
@@ -117,6 +127,7 @@ def test_KE_Hyperparams():
     import pdb
     pdb.set_trace()
 
+
 def test_KE_Meta_Train():
     training_hparams = KETrainingHparams.from_hparams('./hparams/TRAINING/KE')
     train_ds = ZsreDataset('./data/zsre_mend_train.json', config=training_hparams)
@@ -128,6 +139,7 @@ def test_KE_Meta_Train():
     )
 
     trainer.run()
+
 
 def test_KE_Meta_Train_GPTJ():
     training_hparams = KETrainingHparams.from_hparams('./hparams/TRAINING/KE/gpt-j-6B.yaml')
@@ -141,8 +153,9 @@ def test_KE_Meta_Train_GPTJ():
 
     trainer.run()
 
+
 def test_MEND_Meta_Train():
-    training_hparams = MENDTrainingHparams.from_hparams('./hparams/TRAINING/MEND')
+    training_hparams = MENDTrainingHparams.from_hparams('./hparams/TRAINING/MEND/llama-7b.yaml')
     train_ds = ZsreDataset('./data/zsre_mend_train.json', config=training_hparams)
     eval_ds = ZsreDataset('./data/zsre_mend_eval.json', config=training_hparams)
     trainer = EditTrainer(
@@ -165,6 +178,7 @@ def test_KE_Meta_Counterfacat_Train():
     )
 
     trainer.run()
+
 
 def test_ROME():
 
@@ -191,6 +205,7 @@ def test_ROME():
     pdb.set_trace()
 
     return metrics, edited_model
+
 
 def test_MEMIT():
 
@@ -249,6 +264,121 @@ def test_MEMIT():
 
     return metrics, edited_model
 
+def test_EMMET():
+
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    subject = ['Ray Charles',
+               'Grant Hill',
+               'Ikaalinen'
+               ]
+
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    hparams = EMMETHyperParams.from_hparams('./hparams/EMMET/gpt2-xl')
+    editor = BaseEditor.from_hparams(hparams)
+    print(editor)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_PMET():
+
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    subject = ['Ray Charles',
+               'Grant Hill',
+               'Ikaalinen'
+               ]
+
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    hparams = PMETHyperParams.from_hparams('./hparams/PMET/llama-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
 def test_MEND():
 
     prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
@@ -265,13 +395,14 @@ def test_MEND():
         prompts=prompts,
         ground_truth=ground_truth,
         target_new=target_new,
-        keep_original_weight=True
+        sequential_edit=False
     )
 
     import pdb
     pdb.set_trace()
 
     return metrics, edited_model
+
 
 def test_KE():
 
@@ -310,8 +441,9 @@ def test_SERAC_Counterfacat_Train():
 
     trainer.run()
 
+
 def test_SERAC_Zsre_Train():
-    training_hparams = SERACTrainingHparams.from_hparams('./hparams/TRAINING/SERAC/baichuan-7b.yaml')
+    training_hparams = SERACTrainingHparams.from_hparams('./hparams/TRAINING/SERAC/llama-7b.yaml')
     train_ds = ZsreDataset('./data/zsre_mend_train.json', config=training_hparams)
     eval_ds = ZsreDataset('./data/zsre_mend_eval.json', config=training_hparams)
     trainer = EditTrainer(
@@ -321,6 +453,7 @@ def test_SERAC_Zsre_Train():
     )
 
     trainer.run()
+
 
 def test_SERAC_Zsre_Train_GPTJ():
     training_hparams = SERACTrainingHparams.from_hparams('./hparams/TRAINING/SERAC/gpt-j-6B.yaml')
@@ -333,6 +466,8 @@ def test_SERAC_Zsre_Train_GPTJ():
     )
 
     trainer.run()
+
+
 def test_SERAC_Zsre_Train_Llama():
     training_hparams = SERACTrainingHparams.from_hparams('./hparams/TRAINING/SERAC/llama-7b.yaml')
     train_ds = ZsreDataset('./data/zsre_mend_train.json', config=training_hparams)
@@ -345,6 +480,7 @@ def test_SERAC_Zsre_Train_Llama():
 
     trainer.run()
 
+
 def test_SERAC_Zsre_Train_T5():
     training_hparams = SERACTrainingHparams.from_hparams('./hparams/TRAINING/SERAC/t5-3B.yaml')
     train_ds = ZsreDataset('./data/zsre_mend_train.json', config=training_hparams)
@@ -356,6 +492,7 @@ def test_SERAC_Zsre_Train_T5():
     )
 
     trainer.run()
+
 
 def test_SERAC():
 
@@ -393,6 +530,7 @@ def test_SERAC():
 
     return metrics, edited_model
 
+
 def test_SERAC_T5():
 
     import json
@@ -413,6 +551,7 @@ def test_SERAC_T5():
     pdb.set_trace()
 
     return metrics, edited_model
+
 
 def test_IKE():
 
@@ -448,6 +587,7 @@ def test_IKE():
     pdb.set_trace()
 
     return metrics, edited_model
+
 
 def test_IKE_2():
 
@@ -501,7 +641,8 @@ def test_IKE_2():
     pdb.set_trace()
 
     return metrics, edited_model
-  
+
+
 def test_IKE_Llama():
 
     prompts = ['Ray Charles, the',
@@ -554,6 +695,7 @@ def test_IKE_Llama():
     pdb.set_trace()
 
     return metrics, edited_model
+
 
 def test_IKE_GPTJ():
 
@@ -621,6 +763,7 @@ def test_MEND_Meta_Train_Llama():
 
     trainer.run()
 
+
 def test_MEND_Meta_Train_GPTJ():
     training_hparams = MENDTrainingHparams.from_hparams('./hparams/TRAINING/MEND/gpt-j-6B.yaml')
     train_ds = ZsreDataset('./data/zsre_mend_train.json', config=training_hparams)
@@ -632,7 +775,6 @@ def test_MEND_Meta_Train_GPTJ():
     )
 
     trainer.run()
-
 
 
 def test_MEND_Llama():
@@ -667,6 +809,7 @@ def test_MEND_Llama():
 
     return metrics, edited_model
 
+
 def test_MEND_GPTJ():
 
     # prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
@@ -698,6 +841,7 @@ def test_MEND_GPTJ():
     pdb.set_trace()
 
     return metrics, edited_model
+
 
 def test_MEND_T5():
 
@@ -815,6 +959,122 @@ def test_MEMIT_GPTJ():
     pdb.set_trace()
 
     return metrics, edited_model
+
+
+def test_EMMET_GPTJ():
+
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    subject = ['Ray Charles',
+               'Grant Hill',
+               'Ikaalinen'
+               ]
+
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    hparams = EMMETHyperParams.from_hparams('./hparams/EMMET/gpt-j-6B')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_MEMIT_GPTJ():
+
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    subject = ['Ray Charles',
+               'Grant Hill',
+               'Ikaalinen'
+               ]
+
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    hparams = EMMETHyperParams.from_hparams('./hparams/EMMET/gpt-j-6B')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
 def test_KE_GPTJ():
     prompts = ['Who is the architect for Toodyay Fire Station?', 'Who is Claire Clairmont\'s sister?',
                'Which fictional universe is Chlorophyll Kid part of?']
@@ -858,6 +1118,7 @@ def test_FT_T5():
     pdb.set_trace()
 
     return metrics, edited_model
+
 
 def test_IKE_T5():
 
@@ -912,6 +1173,7 @@ def test_IKE_T5():
 
     return metrics, edited_model
 
+
 def test_KE_Meta_Train_T5():
     training_hparams = KETrainingHparams.from_hparams('./hparams/TRAINING/KE/t5-3B.yaml')
     train_ds = ZsreDataset('./data/zsre_mend_train.json', config=training_hparams)
@@ -923,6 +1185,7 @@ def test_KE_Meta_Train_T5():
     )
 
     trainer.run()
+
 
 def test_KE_T5():
     prompts = ['Who is the architect for Toodyay Fire Station?', 'Who is Claire Clairmont\'s sister?',
@@ -952,6 +1215,7 @@ def test_MEND_Meta_Train_T5():
     )
 
     trainer.run()
+
 
 def test_ROME_LlaMA():
 
@@ -1026,6 +1290,7 @@ def test_ROME_DEMO():
     print('Pre-Edit Outputs: ', [tokenizer.decode(x, skip_special_tokens=True) for x in pre_edit_outputs.detach().cpu().numpy().tolist()][0])
     print('\033[1;35mPost-Edit\033[0m Outputs: ', [tokenizer.decode(x, skip_special_tokens=True) for x in post_edit_outputs.detach().cpu().numpy().tolist()][0].replace('Boris Johnson', '\033[1;35mBoris Johnson\033[0m'))    # exit()
 
+
 def ROME_DEMO_2():
     import warnings
     warnings.filterwarnings("ignore")
@@ -1087,6 +1352,7 @@ def ROME_DEMO_2():
     # print('\033[1;35mPre-Edit\033[0m Outputs: ', [tokenizer.decode(x, skip_special_tokens=True) for x in pre_edit_outputs.detach().cpu().numpy().tolist()][0])
     print('\033[1;35mPost-Edit\033[0m Outputs: ', [tokenizer.decode(x, skip_special_tokens=True) for x in post_edit_outputs.detach().cpu().numpy().tolist()])    # exit()
 
+
 def test_Llama2():
     # prompts = ['Which family does Ramalinaceae belong to',
     #            'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
@@ -1098,7 +1364,7 @@ def test_Llama2():
     #               'Alfred Lahti', 'ITV', 'New Orleans', 'Microsoft', 'football', 'Colt\'s Manufacturing Corporation']
     import json
 
-    edit_data = json.load(open('./data/zsre_mend_eval_one_hop.json', 'r', encoding='utf-8'))
+    edit_data = json.load(open('./data/zsre_mend_eval_one_hop.json', 'r', encoding='utf-8'))[:3]
     prompts = [edit_data_['src'] for edit_data_ in edit_data]
     rephrase_prompts = [edit_data_['rephrase'] for edit_data_ in edit_data]
     target_new = [edit_data_['alt'] for edit_data_ in edit_data]
@@ -1122,12 +1388,16 @@ def test_Llama2():
     subject = [edit_data_['subject'] for edit_data_ in edit_data]
     # hparams = MENDHyperParams.from_hparams('./hparams/MEND/llama-7b.yaml')
     # hparams = FTHyperParams.from_hparams('./hparams/FT/llama-7b.yaml')
-    # hparams = IKEHyperParams.from_hparams('./hparams/IKE/llama-7b.yaml')
-    # train_ds = ZsreDataset('./data/zsre_mend_train.json', size=20000)
+    # hparams = IKEHyperParams.from_hparams('./hparams/IKE/internlm-7b.yaml')
+    # sentence_model = SentenceTransformer(hparams.sentence_model_name).to(f'cuda:{hparams.device}')
+    train_ds = ZsreDataset('./data/zsre_mend_train.json', size=10000)
+    # encode_ike_facts(sentence_model, train_ds, hparams)
     # hparams = ROMEHyperParams.from_hparams('./hparams/ROME/llama-7b.yaml')
+    hparams = R_ROMEHyperParams.from_hparams('./hparams/R-ROME/llama-7b.yaml')
     # hparams = MEMITHyperParams.from_hparams('./hparams/MEMIT/llama-7b.yaml')
     # hparams = SERACHparams.from_hparams('./hparams/SERAC/llama-7b.yaml')
-    hparams = KNHyperParams.from_hparams('./hparams/KN/llama-7b.yaml')
+    # hparams = GraceHyperParams.from_hparams('./hparams/GRACE/llama-7B.yaml')
+    # hparams = KNHyperParams.from_hparams('./hparams/KN/gpt2-xl.yaml')
 
     editor = BaseEditor.from_hparams(hparams)
     metrics, edited_model, _ = editor.edit(
@@ -1137,13 +1407,15 @@ def test_Llama2():
         subject=subject,
         locality_inputs=locality_inputs,
         portability_inputs=portability_inputs,
-        keep_original_weight=True
+        train_ds=train_ds,
+        sequential_edit=False
     )
 
     import pdb
     pdb.set_trace()
 
     return metrics, edited_model
+
 
 def test_ROME_Baichuan():
 
@@ -1204,6 +1476,8 @@ def test_MEND_Baichuan():
     pdb.set_trace()
 
     return metrics, edited_model
+
+
 def test_MEMIT_Baichuan():
 
     prompts = ['Ray Charles, the',
@@ -1260,6 +1534,8 @@ def test_MEMIT_Baichuan():
     pdb.set_trace()
 
     return metrics, edited_model
+
+
 def test_KN_Baichuan():
     prompts = ['Who is the architect for Toodyay Fire Station?', 'Who is Claire Clairmont\'s sister?',
                'Which fictional universe is Chlorophyll Kid part of?']
@@ -1278,6 +1554,7 @@ def test_KN_Baichuan():
     pdb.set_trace()
 
     return metrics, edited_model    
+
 
 def test_IKE_Baichuan():
 
@@ -1332,6 +1609,7 @@ def test_IKE_Baichuan():
 
     return metrics, edited_model
 
+
 def test_SERAC_Baichuan():
 
     prompts = ['BBC One, by',
@@ -1368,6 +1646,132 @@ def test_SERAC_Baichuan():
 
     return metrics, edited_model
 
+
+def test_LoRA_llama():
+
+    import json
+    import random
+    edit_data = json.load(open('./data/zsre_mend_eval_one_hop.json', 'r', encoding='utf-8'))
+    edit_data = random.sample(edit_data, 10)
+    prompts = [edit_data_['src'] for edit_data_ in edit_data]
+    rephrase_prompts = [edit_data_['rephrase'] for edit_data_ in edit_data]
+    target_new = [edit_data_['alt'] for edit_data_ in edit_data]
+    locality_prompts = [edit_data_['loc'] for edit_data_ in edit_data]
+    locality_ans = [edit_data_['loc_ans'] for edit_data_ in edit_data]
+    portability_prompts = [edit_data_['portability']['New Question'] for edit_data_ in edit_data]
+    portability_ans = [edit_data_['portability']['New Answer'] for edit_data_ in edit_data]
+
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': locality_prompts,
+            'ground_truth': locality_ans
+        },
+    }
+    portability_inputs = {
+        'one_hop':{
+            'prompt': portability_prompts,
+            'ground_truth': portability_ans
+        },
+    }
+    subject = [edit_data_['subject'] for edit_data_ in edit_data]
+    # hparams = MENDHyperParams.from_hparams('./hparams/MEND/llama-7b.yaml')
+    # hparams = FTHyperParams.from_hparams('./hparams/FT/llama-7b.yaml')
+    # hparams = IKEHyperParams.from_hparams('./hparams/IKE/llama-7b.yaml')
+    # train_ds = ZsreDataset('./data/zsre_mend_train.json', size=20000)
+    hparams = ROMEHyperParams.from_hparams('./hparams/ROME/gpt-j-6B.yaml')
+    # hparams = MEMITHyperParams.from_hparams('./hparams/MEMIT/llama-7b.yaml')
+    # hparams = SERACHparams.from_hparams('./hparams/SERAC/llama-7b.yaml')
+    # hparams = KNHyperParams.from_hparams('./hparams/KN/llama-7b.yaml')
+    # hparams = LoRAHyperParams.from_hparams('./hparams/LoRA/llama-7b.yaml')
+
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        rephrase_prompts=rephrase_prompts,
+        target_new=target_new,
+        subject=subject,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_qlora_Qwen():
+    from easyeditor import BaseEditor, QLoRAHyperParams, KnowEditDataset
+    datas = KnowEditDataset('EasyEdit/knowedit_benchmark/WikiBio/wikibio-train-all.json',size=10)
+    prompts=[data['prompt'] for data in datas]
+    subjects=[data['subject'] for data in datas]
+    target_new = [data['target_new'] for data in datas]
+
+    locality_rs = [data['locality_rs'] for data in datas]
+    locality_f = [data['locality_f'] for data in datas]
+    locality_Relation_Specificity_prompts=[]
+    locality_Relation_Specificity_ans=[]
+
+    locality_data = [locality_rs]
+    locality_prompts = [locality_Relation_Specificity_prompts]
+    locality_answers = [locality_Relation_Specificity_ans]
+    for data, local_prompts, local_answers in zip(locality_data,locality_prompts,locality_answers):
+        for item in data:
+            if item is None:
+                local_prompts.append(None)
+                local_answers.append(None)
+            else:
+                temp_prompts = []
+                temp_answers = []
+                for pr in item:
+                    prompt=pr["prompt"]
+                    an=pr["ground_truth"]
+                    while isinstance(an,list):
+                        an = an[0]
+                    if an.strip() =="":
+                        continue
+                    temp_prompts.append(prompt)
+                    temp_answers.append(an)
+                local_prompts.append(temp_prompts)
+                local_answers.append(temp_answers)
+    assert len(prompts) == len(locality_Relation_Specificity_prompts)
+    portability_inputs = None
+    locality_inputs = {}
+    locality_inputs = {
+        'Relation_Specificity':{
+            'prompt': locality_Relation_Specificity_prompts,
+            'ground_truth': locality_Relation_Specificity_ans
+        }
+    }
+
+    hparams = QLoRAHyperParams.from_hparams('./hparams/QLoRA/qwen2.5-7b.yaml')
+    pre_file = f"./qlora_wikibio_pre_edit.json"
+    metrics_save_dir = f"./qlora_wikibio_metrics"
+    print(pre_file)
+    if pre_file is not None and os.path.exists(pre_file):
+        pre_edit = json.load(open(pre_file,'r'))
+        assert len(pre_edit) == len(prompts)
+    else:
+        pre_edit = None
+
+    train_ds = None
+    editor = BaseEditor.from_hparams(hparams)
+
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        target_new=target_new,
+        subject=subjects,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        train_ds=train_ds,
+        keep_original_weight=True,
+        pre_file=pre_file,
+        pre_edit = pre_edit,
+        test_generation=True,
+    )
+    return metrics, edited_model
+
+
 def test_FT_Baichuan():
     prompts = ['Ray Charles, the',
                'Grant Hill is a professional',
@@ -1395,6 +1799,7 @@ def test_FT_Baichuan():
 
     return metrics, edited_model
 
+
 def baichuanserac():
     training_hparams = SERACTrainingHparams.from_hparams('./hparams/TRAINING/SERAC/baichuan-7b.yaml')
     train_ds = ZsreDataset('/mnt/peng/EasyEdit/data/zsre_mend_train.json', config=training_hparams)
@@ -1406,6 +1811,7 @@ def baichuanserac():
     )
 
     trainer.run()
+
 
 def test_KN_ChatGLM():
     # prompts = ['梅西的俱乐部是什么？']
@@ -1442,6 +1848,7 @@ def test_KN_ChatGLM():
 
     return metrics, edited_model 
 
+
 def test_FT_ChatGLM():
     prompts = ['Ray Charles, the',
                'Grant Hill is a professional',
@@ -1467,6 +1874,7 @@ def test_FT_ChatGLM():
     pdb.set_trace()
 
     return metrics, edited_model
+
 
 def test_IKE_ChatGLM():
 
@@ -1520,6 +1928,7 @@ def test_IKE_ChatGLM():
     pdb.set_trace()
 
     return metrics, edited_model
+
 
 def test_MEMIT_ChatGLM():
 
@@ -1578,6 +1987,7 @@ def test_MEMIT_ChatGLM():
 
     return metrics, edited_model
 
+
 def test_MEND_Train_ChatGLM():
     training_hparams = MENDTrainingHparams.from_hparams('./hparams/TRAINING/MEND/chatglm2-6b.yaml')
     train_ds = ZsreDataset('./data/zsre/zsre_mend_train.json', config=training_hparams)
@@ -1589,6 +1999,7 @@ def test_MEND_Train_ChatGLM():
     )
 
     trainer.run()
+
 
 def test_MEND_ChatGLM():
 
@@ -1622,6 +2033,7 @@ def test_MEND_ChatGLM():
 
     return metrics, edited_model
 
+
 def test_ROME_ChatGLM():
 
     prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
@@ -1653,6 +2065,7 @@ def test_ROME_ChatGLM():
 
     return metrics, edited_model
 
+
 def test_ChatGPT():
 
     import os
@@ -1682,6 +2095,928 @@ def test_ChatGPT():
 
     return metrics, edited_model
 
+def test_FT_Internlm():
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    hparams = FTHyperParams.from_hparams('./hparams/FT/internlm-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts + prompts,
+        ground_truth=ground_truth + ground_truth,
+        target_new=target_new + target_new
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_IKE_Internlm():
+
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    hparams = IKEHyperParams.from_hparams('./hparams/IKE/internlm-7b.yaml')
+    train_ds = CounterFactDataset('./data/counterfact/counterfact-train.json')
+    # sentence_model = SentenceTransformer(hparams.sentence_model_name).to(f'cuda:{hparams.device}')
+    # encode_ike_facts(sentence_model, train_ds, hparams)
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        train_ds=train_ds,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_KN_Internlm():
+    prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?']
+    # ground_truth = None,
+    ground_truth = ['Illinois Institute of Technology', 'Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles']
+    target_new = ['University of Michigan', 'Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans']
+    hparams = KNHyperParams.from_hparams('./hparams/KN/internlm-7b.yaml')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts='What university did Watts Humphrey attend?' if prompts is None else prompts,
+        ground_truth='Illinois Institute of Technology' if ground_truth is None else ground_truth,
+        target_new='University of Michigan' if target_new is None else target_new,
+        keep_original_weight=True,
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_MEMIT_Internlm():
+
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    subject = ['Ray Charles',
+               'Grant Hill',
+               'Ikaalinen'
+               ]
+
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    hparams = MEMITHyperParams.from_hparams('./hparams/MEMIT/internlm-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+
+def test_MEND_Train_Internlm():
+    training_hparams = MENDTrainingHparams.from_hparams('./hparams/TRAINING/MEND/internlm-7b.yaml')
+    train_ds = ZsreDataset('./data/zsre/zsre_mend_train.json', config=training_hparams)
+    eval_ds = ZsreDataset('./data/zsre/zsre_mend_eval.json', config=training_hparams)
+    trainer = EditTrainer(
+        config=training_hparams,
+        train_set=train_ds,
+        val_set=eval_ds
+    )
+
+    trainer.run()
+
+def test_MEND_Internlm():
+    prompts = ['Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?',
+               'Steve Jobs was the founder of', 'LeBron James plays the sport of', 'The manufacturer of Colt King Cobra was who']
+    ground_truth = ['Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles', 'Apple', 'basketball', 'Colt\'s Manufacturing Company']
+    target_new = ['Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans', 'Microsoft', 'football', 'Colt\'s Manufacturing Corporation']
+    hparams = MENDHyperParams.from_hparams('./hparams/MEND/internlm-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_ROME_Internlm():
+
+    prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?']
+    ground_truth = ['Illinois Institute of Technology', 'Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles']
+    target_new = ['University of Michigan', 'Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans']
+    subject = ['Watts Humphrey', 'Ramalinaceae', 'Denny Herzig',
+               'Lahti Town Hall', 'It\'s a Business', 'Marl Young']
+
+    hparams = ROMEHyperParams.from_hparams('./hparams/ROME/internlm-7b.yaml')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_FT_Qwen():
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    # hparams = FTHyperParams.from_hparams('./hparams/FT/qwen-7b')
+    hparams = FTHyperParams.from_hparams('./hparams/FT/qwen2-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_IKE_Qwen():
+
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    # hparams = IKEHyperParams.from_hparams('./hparams/IKE/qwen-7b.yaml')
+    hparams = IKEHyperParams.from_hparams('./hparams/IKE/qwen2-7b.yaml')
+    train_ds = CounterFactDataset('./data/counterfact/counterfact-train.json')
+    sentence_model = SentenceTransformer(hparams.sentence_model_name).to(f'cuda:{hparams.device}')
+    encode_ike_facts(sentence_model, train_ds, hparams)
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        train_ds=train_ds,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_KN_Qwen():
+    prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?']
+    # ground_truth = None,
+    ground_truth = ['Illinois Institute of Technology', 'Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles']
+    target_new = ['University of Michigan', 'Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans']
+    # hparams = KNHyperParams.from_hparams('./hparams/KN/qwen-7b.yaml')
+    hparams = KNHyperParams.from_hparams('./hparams/KN/qwen2-7b.yaml')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts='What university did Watts Humphrey attend?' if prompts is None else prompts,
+        ground_truth='Illinois Institute of Technology' if ground_truth is None else ground_truth,
+        target_new='University of Michigan' if target_new is None else target_new,
+        keep_original_weight=True,
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_ROME_Qwen():
+
+    prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?']
+    ground_truth = ['Illinois Institute of Technology', 'Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles']
+    target_new = ['University of Michigan', 'Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans']
+    subject = ['Watts Humphrey', 'Ramalinaceae', 'Denny Herzig',
+               'Lahti Town Hall', 'It\'s a Business', 'Marl Young']
+
+    # hparams = ROMEHyperParams.from_hparams('./hparams/ROME/qwen-7b.yaml')
+    hparams = ROMEHyperParams.from_hparams('./hparams/ROME/qwen2-7b.yaml')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_MEMIT_Qwen():
+
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    subject = ['Ray Charles',
+               'Grant Hill',
+               'Ikaalinen'
+               ]
+
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    # hparams = MEMITHyperParams.from_hparams('./hparams/MEMIT/qwen-7b')
+    hparams = MEMITHyperParams.from_hparams('./hparams/MEMIT/qwen2-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_MEND_Train_Qwen():
+    # training_hparams = MENDTrainingHparams.from_hparams('./hparams/TRAINING/MEND/qwen-7b.yaml')
+    training_hparams = MENDTrainingHparams.from_hparams('./hparams/TRAINING/MEND/qwen2-7b.yaml')
+    train_ds = ZsreDataset('./data/zsre/zsre_mend_train.json', config=training_hparams)
+    eval_ds = ZsreDataset('./data/zsre/zsre_mend_eval.json', config=training_hparams)
+    trainer = EditTrainer(
+        config=training_hparams,
+        train_set=train_ds,
+        val_set=eval_ds
+    )
+
+    trainer.run()
+
+def test_MEND_Qwen():
+    prompts = ['Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?',
+               'Steve Jobs was the founder of', 'LeBron James plays the sport of', 'The manufacturer of Colt King Cobra was who']
+    ground_truth = ['Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles', 'Apple', 'basketball', 'Colt\'s Manufacturing Company']
+    target_new = ['Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans', 'Microsoft', 'football', 'Colt\'s Manufacturing Corporation']
+    # hparams = MENDHyperParams.from_hparams('./hparams/MEND/qwen-7b')
+    hparams = MENDHyperParams.from_hparams('./hparams/MEND/qwen2-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_GRACE_GPT2():
+
+    prompts = ['Which family does Ramalinaceae belong to',
+                'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+                'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?',
+                'Steve Jobs was the founder of', 'LeBron James plays the sport of', 'The manufacturer of Colt King Cobra was who']
+    ground_truth = ['Lecanorales', 'defender',
+                        'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles', 'Apple', 'basketball', 'Colt\'s Manufacturing Company']
+    target_new = ['Lamiinae', 'winger',
+                    'Alfred Lahti', 'ITV', 'New Orleans', 'Microsoft', 'football', 'Colt\'s Manufacturing Corporation']
+    hparams = GraceHyperParams.from_hparams('./hparams/GRACE/gpt2-xl')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+            prompts=prompts,
+            ground_truth=ground_truth,
+            target_new=target_new,
+            keep_original_weight=True
+        )
+    print(metrics)
+
+def test_GRACE_Qwen():
+
+    prompts = ['Which family does Ramalinaceae belong to',
+                'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+                'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?',
+                'Steve Jobs was the founder of', 'LeBron James plays the sport of', 'The manufacturer of Colt King Cobra was who']
+    ground_truth = ['Lecanorales', 'defender',
+                        'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles', 'Apple', 'basketball', 'Colt\'s Manufacturing Company']
+    target_new = ['Lamiinae', 'winger',
+                    'Alfred Lahti', 'ITV', 'New Orleans', 'Microsoft', 'football', 'Colt\'s Manufacturing Corporation']
+    hparams = GraceHyperParams.from_hparams('./hparams/GRACE/qwen2-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+            prompts=prompts,
+            ground_truth=ground_truth,
+            target_new=target_new
+        )
+    print(metrics)
+
+def test_FT_Mistral():
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    hparams = FTHyperParams.from_hparams('./hparams/FT/mistral-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_IKE_Mistral():
+
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    hparams = IKEHyperParams.from_hparams('./hparams/IKE/mistral-7b.yaml')
+    train_ds = CounterFactDataset('./data/counterfact/counterfact-train.json')
+    sentence_model = SentenceTransformer(hparams.sentence_model_name).to(f'cuda:{hparams.device}')
+    encode_ike_facts(sentence_model, train_ds, hparams)
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        train_ds=train_ds,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_KN_Mistral():
+    prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?']
+    # ground_truth = None,
+    ground_truth = ['Illinois Institute of Technology', 'Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles']
+    target_new = ['University of Michigan', 'Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans']
+    hparams = KNHyperParams.from_hparams('./hparams/KN/mistral-7b.yaml')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts='What university did Watts Humphrey attend?' if prompts is None else prompts,
+        ground_truth='Illinois Institute of Technology' if ground_truth is None else ground_truth,
+        target_new='University of Michigan' if target_new is None else target_new,
+        keep_original_weight=True,
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_ROME_Mistral():
+
+    prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?']
+    ground_truth = ['Illinois Institute of Technology', 'Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles']
+    target_new = ['University of Michigan', 'Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans']
+    subject = ['Watts Humphrey', 'Ramalinaceae', 'Denny Herzig',
+               'Lahti Town Hall', 'It\'s a Business', 'Marl Young']
+
+    hparams = ROMEHyperParams.from_hparams('./hparams/ROME/mistral-7b.yaml')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_MEND_Train_Mistral():
+    training_hparams = MENDTrainingHparams.from_hparams('./hparams/TRAINING/MEND/mistral-7b.yaml')
+    train_ds = ZsreDataset('./data/zsre/zsre_mend_train.json', config=training_hparams)
+    eval_ds = ZsreDataset('./data/zsre/zsre_mend_eval.json', config=training_hparams)
+    trainer = EditTrainer(
+        config=training_hparams,
+        train_set=train_ds,
+        val_set=eval_ds
+    )
+
+    trainer.run()
+
+def test_MEND_Mistral():
+    prompts = ['Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?',
+               'Steve Jobs was the founder of', 'LeBron James plays the sport of', 'The manufacturer of Colt King Cobra was who']
+    ground_truth = ['Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles', 'Apple', 'basketball', 'Colt\'s Manufacturing Company']
+    target_new = ['Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans', 'Microsoft', 'football', 'Colt\'s Manufacturing Corporation']
+    hparams = MENDHyperParams.from_hparams('./hparams/MEND/mistral-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_MEMIT_Mistral():
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    subject = ['Ray Charles',
+               'Grant Hill',
+               'Ikaalinen'
+               ]
+
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    hparams = MEMITHyperParams.from_hparams('./hparams/MEMIT/mistral-7b')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+
+def test_melo():
+
+    prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?']
+    ground_truth = ['Illinois Institute of Technology', 'Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles']
+    target_new = ['University of Michigan', 'Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans']
+    subject = ['Watts Humphrey', 'Ramalinaceae', 'Denny Herzig',
+               'Lahti Town Hall', 'It\'s a Business', 'Marl Young']
+
+    hparams = MELOHyperParams.from_hparams('./hparams/MELO/gpt2-xl.yaml')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        subject=subject,
+        keep_original_weight=False
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_MALMEN_Train():
+    training_hparams = MALMENTrainingHparams.from_hparams('./hparams/TRAINING/MALMEN/gpt2-xl.yaml')
+    train_ds = ZsreDataset('./data/zsre/zsre_mend_train.json', config=training_hparams)
+    print("train_ds", train_ds.__len__())
+    eval_ds = ZsreDataset('./data/zsre/zsre_mend_eval.json', config=training_hparams)
+    print("eval_ds", eval_ds.__len__())
+
+    trainer = EditTrainer(
+        config=training_hparams,
+        train_set=train_ds,
+        val_set=eval_ds
+    )
+
+    trainer.run()
+
+def test_MALMEN():
+
+    prompts = ['What university did Watts Humphrey attend?', 'Which family does Ramalinaceae belong to',
+               'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+               'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?',
+               'Steve Jobs was the founder of', 'LeBron James plays the sport of']
+    ground_truth = ['Illinois Institute of Technology', 'Lecanorales', 'defender',
+                    'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles', 'Apple', 'basketball']
+    target_new = ['University of Michigan', 'Lamiinae', 'winger',
+                  'Alfred Lahti', 'ITV', 'New Orleans', 'Microsoft', 'football']
+
+    # prompts = ['What university did Watts Humphrey attend?']
+    # ground_truth = ['Illinois Institute of Technology']
+    # target_new = ['University of Michigan']
+    hparams = MALMENHyperParams.from_hparams('./hparams/MALMEN/gpt2-xl')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        ground_truth=ground_truth,
+        target_new=target_new,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+def test_WISE():
+    # prompts = ['Which family does Ramalinaceae belong to',
+    #            'What role does Denny Herzig play in football?', 'Who was the designer of Lahti Town Hall?',
+    #            'What is the original channel that It\'s a Business played on?', 'What city did Marl Young live when he died?',
+    #            'Steve Jobs was the founder of', 'LeBron James plays the sport of', 'The manufacturer of Colt King Cobra was who']
+    # ground_truth = ['Lecanorales', 'defender',
+    #                 'Eliel Saarinen', 'DuMont Television Network', 'Los Angeles', 'Apple', 'basketball', 'Colt\'s Manufacturing Company']
+    # target_new = ['Lamiinae', 'winger',
+    #               'Alfred Lahti', 'ITV', 'New Orleans', 'Microsoft', 'football', 'Colt\'s Manufacturing Corporation']
+    import json
+
+    # ZsRE
+    edit_data = json.load(open('./data/zsre_mend_eval_one_hop.json', 'r', encoding='utf-8'))[:10]
+    loc_data = json.load(open('./data/zsre_mend_train.json', 'r', encoding='utf-8'))[:10]
+    loc_prompts = [edit_data_['loc'] + ' ' + edit_data_['loc_ans'] for edit_data_ in loc_data]
+    if len(loc_prompts) < len(edit_data):
+        loc_prompts = (loc_prompts * math.ceil(len(edit_data) / len(loc_prompts)))[:len(edit_data)]
+        random.shuffle(loc_prompts)
+    prompts = [edit_data_['src'] for edit_data_ in edit_data]
+    rephrase_prompts = [edit_data_['rephrase'] for edit_data_ in edit_data]
+    target_new = [edit_data_['alt'] for edit_data_ in edit_data]
+    locality_prompts = [edit_data_['loc'] for edit_data_ in edit_data]
+    locality_ans = [edit_data_['loc_ans'] for edit_data_ in edit_data]
+    portability_prompts = [edit_data_['portability']['New Question'] for edit_data_ in edit_data]
+    portability_ans = [edit_data_['portability']['New Answer'] for edit_data_ in edit_data]
+
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': locality_prompts,
+            'ground_truth': locality_ans
+        },
+    }
+    portability_inputs = {
+        'one_hop':{
+            'prompt': portability_prompts,
+            'ground_truth': portability_ans
+        },
+    }
+    # hparams = WISEHyperParams.from_hparams('./hparams/WISE/llama-7b.yaml')
+    hparams = WISEHyperParams.from_hparams('./hparams/WISE/gpt-j-6B.yaml')
+
+    editor = BaseEditor.from_hparams(hparams)
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        rephrase_prompts=rephrase_prompts,
+        target_new=target_new,
+        loc_prompts=loc_prompts,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        sequential_edit=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+    
+def test_deepedit_api():
+    datasets = json.load(open('EasyEdit/data/MQuAKE-CF-3k.json','r'))
+    hparams = DeepEditApiHyperParams.from_hparams('EasyEdit/hparams/DeepEdit_Api/chatglm_api.yaml')
+    editor = BaseEditor.from_hparams(hparams)
+    metrics = editor.deep_edit(
+        datasets = datasets
+    )
+    return metrics
+
+def test_DPO_llama():
+    # 自定义更多的数据样本
+    prompts = ['Ray Charles, the',
+               'Grant Hill is a professional',
+               'The law in Ikaalinen declares the language'
+               ]
+    ground_truth = ['piano',
+                    'basketball',
+                    'Finnish'
+                    ]
+    target_new = ['violin',
+                  'soccer',
+                  'Swedish'
+                  ]
+    target_neg = ['guitar',
+                  'football',
+                  'English'
+                  ]
+    subject = ['Ray Charles',
+               'Grant Hill',
+               'Ikaalinen'
+               ]
+    rephrase_prompts = ['Ray Charles is',
+                        'Grant Hill, a professional',
+                        'Ikaalinen\'s law declares the language'
+                        ]
+
+    locality_inputs = {
+        'neighborhood':{
+            'prompt': ['Joseph Fischhof, the', 'Larry Bird is a professional', 'In Forssa, they understand'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        },
+        'distracting': {
+            'prompt': ['Ray Charles, the violin Hauschka plays the instrument', 'Grant Hill is a professional soccer Magic Johnson is a professional', 'The law in Ikaalinen declares the language Swedish In Loviisa, the language spoken is'],
+            'ground_truth': ['piano', 'basketball', 'Finnish']
+        }
+    }
+    portability_inputs = {
+        'synonym':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        },
+        'one_hop':{
+            'prompt': ['Ray Charles, the', 'Grant Hill is a professional', 'The law in Ikalis declares the language'],
+            'ground_truth': ['violin', 'soccer', 'Swedish']
+        }
+    }
+
+    # 加载超参数，选择适当的编辑器
+    hparams = DPOHyperParams.from_hparams('./hparams/DPO/llama3-8b.yaml')  # 示例为 ROME 参数
+    editor = BaseEditor.from_hparams(hparams)
+
+    # 执行编辑，传递 locality 和 portability 输入
+    metrics, edited_model, _ = editor.edit(
+        prompts=prompts,
+        rephrase_prompts=rephrase_prompts,
+        target_new=target_new,
+        target_neg=target_neg,
+        subject=subject,
+        locality_inputs=locality_inputs,
+        portability_inputs=portability_inputs,
+        keep_original_weight=True
+    )
+
+    import pdb
+    pdb.set_trace()
+
+    return metrics, edited_model
+
+
 def main():
     # metrics, edited_model = test_KN()
 
@@ -1697,6 +3032,7 @@ def main():
 
     # test_ROME()
     # test_MEMIT()
+    # test_EMMET()
     # test_MEND_Meta_Train()
     # test_MEND()
     # test_KE()
@@ -1747,8 +3083,37 @@ def main():
     # test_MEMIT_ChatGLM()
     # test_MEND_Train_ChatGLM()
     # test_MEND_ChatGLM()
-    test_ROME_ChatGLM()
-    
+    # test_ROME_ChatGLM()
+    # test_LoRA_llama()
+    # test_DPO_llama()
+    # test_FT_Internlm()
+    # test_IKE_Internlm()
+    # test_KN_Internlm()
+    # test_MEMIT_Internlm()
+    # test_MEND_Train_Internlm()
+    # test_MEND_Internlm()
+    # test_ROME_Internlm()
+    # test_FT_Qwen()
+    # test_KN_Qwen()
+    # test_ROME_Qwen()
+    # test_IKE_Qwen()
+    # test_MEMIT_Qwen()
+    # test_MEND_Train_Qwen()
+    # test_MEND_Qwen()
+    # test_GRACE_Qwen()
+    # test_GRACE_GPT2()
+    # test_PMET()
+    # test_FT_Mistral()
+    # test_IKE_Mistral()
+    # test_KN_Mistral()
+    # test_ROME_Mistral()
+    # test_MEND_Train_Mistral()
+    # test_MEND_Mistral()
+    # test_MEMIT_Mistral()
+    # test_MALMEN_Train()
+    # test_MALMEN()
+    # test_WISE()
+      test_deepedit_api()
 
 if __name__ == '__main__':
     main()

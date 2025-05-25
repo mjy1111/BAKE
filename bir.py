@@ -1,298 +1,110 @@
-
-import os,json
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+import json
+import random
+import argparse
+from easyeditor import FTHyperParams
+from easyeditor import KNHyperParams
+from easyeditor import ROMEHyperParams
+from easyeditor import WISEHyperParams
+from easyeditor import MEMITHyperParams
+from easyeditor import GraceHyperParams
+from easyeditor import AlphaEditHyperParams
 from easyeditor.editors.bi_editor import BiEditor
-from easyeditor import KNHyperParams, FTHyperParams, KETrainingHparams,\
-    ROMEHyperParams, MEMITHyperParams, MENDTrainingHparams, MENDHyperParams, \
-    SERACTrainingHparams, SERACHparams, IKEHyperParams, FTApiHyperParams
 
-import os,json
-from pathlib import Path
-from dsets import CounterFactDataset, MultiCounterFactDataset, BiCounterFactDataset
-from typing import Tuple, Union
-from time import time
 
-import torch
 
-'''
-from dsets import (
-    CounterFactDataset,
-    MultiCounterFactDataset,
-)
-'''
+parser = argparse.ArgumentParser()
+parser.add_argument("--alg_name", type=str, required=True)
+parser.add_argument("--ds_name", type=str, required=True)
+parser.add_argument("--model_name", type=str, required=True)
+parser.add_argument("--cuda", type=int, default=0)
+parser.add_argument("--dataset_size", type=int, default=1)
+args = parser.parse_args()
 
-'''
-from easyeditor.dataset import (
-    CounterFactDataset,
-    MultiCounterFactDataset,
-)
+hparams_path = f"./hparams/{args.alg_name}/{args.model_name}.yaml"
 
-from eval_bi.eval_utils_counterfact import compute_rewrite_quality_counterfact
-'''
-DS_DICT = {
-    "mcf": (MultiCounterFactDataset),
-    "cf": (CounterFactDataset),
-    "bi_cf_qa": (BiCounterFactDataset),
-    "bi_cf_judge": (BiCounterFactDataset),
+alg_hparams_map = {
+    "FT": FTHyperParams,
+    "KN": KNHyperParams,
+    "ROME": ROMEHyperParams,
+    "WISE": WISEHyperParams,
+    "GRACE": GraceHyperParams,
+    "MEMIT": MEMITHyperParams,
+    "AlphaEdit": AlphaEditHyperParams
+}
+if args.alg_name not in alg_hparams_map:
+    raise ValueError(f"Unsupported alg_name: {args.alg_name}")
+
+HyperParamsClass = alg_hparams_map[args.alg_name]
+hparams = HyperParamsClass.from_hparams(hparams_path)
+
+data_path = f"./data/{args.ds_name}.json"
+with open(data_path, 'r') as f:
+    data = json.load(f)
+data = data[:args.dataset_size]
+
+prompts = []
+rephrase_prompts = []
+target_new = []
+subject = []
+relation_id = []
+reverse_qa = []
+reverse_judge = []
+ground_truth = []
+neighbor = []
+
+for entry in data:
+    base_prompt = entry['requested_rewrite']['prompt'].format(entry['requested_rewrite']['subject'])
+    prompts.append(base_prompt)
+
+    para = entry.get('paraphrase_prompts', [])
+    if para:
+        rephrase_prompts.append(random.choice(para))
+    else:
+        rephrase_prompts.append("")
+
+    target_new.append(entry['requested_rewrite']['target_new']['str'])
+    subject.append(entry['requested_rewrite']['subject'])
+    relation_id.append(entry['requested_rewrite']['relation_id'])
+    reverse_judge.append(entry['reverse_judge'])
+    ground_truth.append(entry['requested_rewrite']['target_true']['str'])
+
+    if args.ds_name == "BAKE_qa":
+            reverse_qa.append(entry['reverse_qa'])
+
+    all_neighbors = entry.get('neighborhood_prompts', [])
+    if all_neighbors:
+        one_prompt = random.choice(all_neighbors)
+        neighbor.append([one_prompt])
+    else:
+        neighbor.append([""])
+
+locality_inputs = {
+    'neighborhood': {
+        'prompt': neighbor,
+        'ground_truth': ground_truth
+    }
 }
 
 
-'''
-prompts = ['The mother tongue of China is',
-                'What role does Denny Herzig play in football?',
-                'What city did Marl Young live when he died?']
-ground_truth = ['Eliel Saarinen', 'defender', 'Los Angeles']
-target_new = ['Alfred Lahti', 'winger', 'New Orleans']
-subject = ['China', 'Denny Herzig', 'Marl Young']
-hparams=MEMITHyperParams.from_hparams('hparams/MEMIT/gpt2-xl.yaml')
-editor=BaseEditor.from_hparams(hparams)
-tok=editor.tok
-print(tok.tokenize(" 11sjhwe"))
-metrics, edited_model, _ = editor.edit(
-    prompts=prompts,
-    ground_truth=ground_truth,
-    target_new=target_new,
-    subject=subject,
-    keep_original_weight=False
-)
-print(metrics)
-
-'''
-
-def chunks(arr, n):
-    """Yield successive n-sized chunks from arr."""
-    for i in range(0, len(arr), n):
-        yield arr[i : i + n]
-#print(type(edited_model))
-
-def main(
-    alg_name: str,
-    model_name: Union[str, Tuple],
-    ds_name: str,
-    dataset_size_limit: int,
-    dir_name: str,
-    num_edits: int,
-    cuda: int,
-    aerfa: float,
-    beta: float,):
-    
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(cuda)
-    
-
-    RESULTS_DIR="results/{}".format(ds_name)
-    DATA_DIR="data/BAKE_{}.json".format(ds_name.split("_")[-1])
-    continue_from_run=None
-    
-    #*****************dir name***************
-    if alg_name=="BIRD" and aerfa!=0:
-        dir_name=dir_name+'_'+str(beta)+'_'+str(aerfa)
-
-    if continue_from_run is None:
-        alg_dir = Path("{}/{}/{}/".format(RESULTS_DIR, dir_name, model_name))
-        print(alg_dir)
-        if alg_dir.exists():
-            id_list = [
-                int(str(x).split("_")[-1])
-                for x in alg_dir.iterdir()
-                if str(x).split("_")[-1].isnumeric()
-            ]
-            run_id = 0 if not id_list else max(id_list) + 1
-        else:
-            run_id = 0
-        run_dir = Path("{}/{}/{}/".format(RESULTS_DIR,dir_name,model_name) + f"run_{str(run_id).zfill(3)}")
-        run_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Results will be stored at {run_dir}")
-    
+loc_prompts = []
+for i in range(len(data)):
+    loc_prompt = neighbor[i][0] + ' ' + ground_truth[i][0]
+    loc_prompts.append(loc_prompt)
 
 
-    ds_class = DS_DICT[ds_name]
-    ds = ds_class(DATA_DIR, size=dataset_size_limit)
+editor = BiEditor.from_hparams(hparams)
 
-    # Iterate through dataset
-    
-    for record_chunks in chunks(ds, num_edits):
-        case_result_template = str(run_dir / "{}_edits-case_{}.json")
-
-        # Is the chunk already done?
-        already_finished = True
-        for record in record_chunks:
-            if not Path(
-                case_result_template.format(num_edits, record["case_id"])
-            ).exists():
-                already_finished = False
-                break
-        if already_finished:
-            continue
-
-        # Compute weight changes + record weights that changed
-        case_ids = [record["case_id"] for record in record_chunks]
-
-        #etc_args = dict(cache_template=cache_template) if any(alg in alg_name for alg in ["ROME", "MEMIT"]) else dict()
-
-    start = time()
-    
-
-    prompts=[record['requested_rewrite']["prompt"].format(record['requested_rewrite']["subject"]) for record in ds]
-    ground_truth = [record['requested_rewrite']['target_true']["str"] for record in ds]
-    target_new = [record['requested_rewrite']['target_new']["str"] for record in ds]
-    subject = [record['requested_rewrite']["subject"] for record in ds]
-    relation = [record['requested_rewrite']["relation_id"] for record in ds]
-    
-    para=[record['paraphrase_prompts'] for record in ds]
-    neighbor=[record['neighborhood_prompts'] for record in ds]
-    if 'reverse_qa' in ds[0]:
-        reverse_qa=[record['reverse_qa'] for record in ds]
-    else:
-        reverse_qa=None
-    if "reverse_judge" in ds[0]:
-        reverse_judge=[record['reverse_judge'] for record in ds]
-    else:
-        reverse_judge=None
-    
-    
-    '''
-    edited_model, weights_copy = apply_algo(
-        model,
-        tok,
-        [
-            {"case_id": record["case_id"], **record["requested_rewrite"]}
-            for record in record_chunks
-        ],
-        hparams,
-        copy=False,
-        return_orig_weights=True,
-        **args_conserve_memory,
-        **etc_args,
-    )
-    '''
-    if alg_name=="MEMIT":
-        hparams=MEMITHyperParams.from_hparams('hparams/{}/{}.yaml'.format(alg_name, model_name))
-    elif alg_name=="ROME":
-        hparams=ROMEHyperParams.from_hparams('hparams/{}/{}.yaml'.format(alg_name, model_name))
-        hparams.aerfa=0
-        hparams.beta=0
-    elif alg_name=="BIRD":
-        hparams=ROMEHyperParams.from_hparams('hparams/{}/{}.yaml'.format("ROME", model_name))
-        hparams.aerfa=args.aerfa
-        hparams.beta=args.beta
-    elif alg_name=="MEND":
-        hparams=MENDHyperParams.from_hparams('hparams/{}/{}.yaml'.format(alg_name, model_name))
-    elif alg_name=="KN":
-        hparams=KNHyperParams.from_hparams('hparams/{}/{}.yaml'.format(alg_name, model_name))
-    elif alg_name=="FT":
-        hparams=FTHyperParams.from_hparams('hparams/{}/{}.yaml'.format(alg_name, model_name))
-
-    editor=BiEditor.from_hparams(hparams)
-    tok=editor.tok
-    #print(1)
-    all_metrics, edited_model, _ = editor.edit(
+edit_args = dict(
         prompts=prompts,
-        ground_truth=ground_truth,
+        rephrase_prompts=rephrase_prompts,
         target_new=target_new,
+        relation_id=relation_id,
         subject=subject,
-        rephrase_prompts=para,
-        locality_inputs=neighbor,
-        keep_original_weight=True,
-        reverse_qa_prompts=reverse_qa,
+        train_ds=None,
         reverse_judge_prompts=reverse_judge,
-        relation_id=relation,
-        case_result_template=case_result_template,
-        num_edits1=num_edits,
+        locality_inputs=locality_inputs
     )
-    exec_time = time() - start
-    print("Execution took", exec_time)
+if args.ds_name == "BAKE_qa":
+    edit_args["reverse_qa_prompts"] = reverse_qa
 
-    # Evaluate new model
-    start = time()
-    #gen_test_vars = [None, None]
-    '''
-    i=0
-    for record in ds:
-        out_file = Path(case_result_template.format(num_edits, record["case_id"]))
-        if out_file.exists():
-            print(f"Skipping {out_file}; already exists")
-            continue
-
-        metrics = {
-            "case_id": record["case_id"],
-            "grouped_case_ids": case_ids,
-            "num_edits": num_edits,
-            "requested_rewrite": record["requested_rewrite"],
-            "time": exec_time,
-            "post": all_metrics[i]["post"],
-            "pre": all_metrics[i]["pre"],
-        }
-
-        # Dump metrics in .json
-        with open(out_file, "w") as f:
-            json.dump(metrics, f, indent=1)
-        i+=1
-    '''
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--alg_name",
-        choices=["ROME", "FT", "KN", "MEND", "KE", "MEMIT","SERAC", "BIRD"],
-        default="ROME",
-        help="Editing algorithm to use. Results are saved in results/<alg_name>/<run_id>, "
-        "where a new run_id is generated on each run. "
-        "If continuing from previous run, specify the run_id in --continue_from_run.",
-        required=True,
-    )
-    parser.add_argument(
-        "--model_name",
-        choices=["llama-7b", "gpt2-xl", "gpt-j-6B","llama-13b","vicuna-13b","vicuna-7b","llama2-7b","llama2-13b"],
-        default="gpt2-xl",
-        help="Model to edit.",
-        required=True,
-    )
-    parser.add_argument(
-        "--ds_name",
-        choices=["cf", "zsre","bi_cf_qa","bi_cf_judge"],
-        default="cf",
-        help="Dataset to perform evaluations on. Either CounterFact (cf) or zsRE (zsre).",
-    )
-    parser.add_argument(
-        "--dataset_size_limit",
-        type=int,
-        default=None,
-        help="Truncate CounterFact to first n records.",
-    )
-    parser.add_argument(
-        "--dir_name",
-        default="cf",
-        help="the directory to save results",
-    )
-    parser.add_argument(
-        "--num_edits",
-        type=int,
-        default=1,
-        help="Truncate CounterFact to first n records.",
-    )
-    parser.add_argument(
-        "--cuda",
-        type=int,
-        default=0,
-        help="cuda name",
-    )
-    parser.add_argument(
-        "--aerfa",
-        type=float,
-        default=0,
-        help="cuda name",
-    )
-    parser.add_argument(
-        "--beta",
-        type=float,
-        default=0,
-        help="cuda name",
-    )
-    args = parser.parse_args()
-
-    args.dir_name=args.alg_name
-
-    main(args.alg_name, args.model_name, args.ds_name, args.dataset_size_limit, args.dir_name, args.num_edits, args.cuda, args.aerfa,args.beta)
+metrics, edited_model, _ = editor.edit(**edit_args)

@@ -1,6 +1,6 @@
 # Model
 
-archive: "data/weights/models/MEND/gpt-j-6b"
+archive: ./results/models/MEND/gpt-j-6B
 alg_name: "MEND"
 device: 0
 model_name: ./hugging_cache/gpt-j-6B
@@ -8,6 +8,7 @@ model_name: ./hugging_cache/gpt-j-6B
 model_class: GPTJForCausalLM
 tokenizer_class: AutoTokenizer
 tokenizer_name: ./hugging_cache/gpt-j-6B
+model_parallel: false
 inner_params:
 - transformer.h.25.mlp.fc_in.weight
 - transformer.h.25.mlp.fc_out.weight
