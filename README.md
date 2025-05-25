@@ -62,34 +62,37 @@ GPT-2 XL (1.5B), GPT-J (6B), LLaMA-2 (7B), LLaMA-3 (8B) and LLaMA-2 (13B) are us
 - These model editing methods are used in our paper as follows:
   - [FT](https://github.com/kmeng01/rome): Fine-Tuning with $L_\infty$ constraint
   - [MEND](https://github.com/eric-mitchell/mend): Mitchell et al. Hypernetwork
-  - [KN](https://github.com/Hunter-DDM/knowledge-neurons): Damai Dai et al. Locate then Edit
-  - [ROME](https://github.com/kmeng01/rome): Kevin Meng et al. Locate and Edit
-  - [MEMIT](https://github.com/kmeng01/memit): Kevin Meng et al. Locate and Edit
+  - [ROME](https://github.com/kmeng01/rome): Kevin Meng et al. Locate then Edit
+  - [RECT](https://github.com/JasonForJoy/Model-Editing-Hurt): Jia-Chen Gu et al. Locate then Edit
+  - [MEMIT](https://github.com/kmeng01/memit): Kevin Meng et al. Locate then Edit
+  - [AlphaEdit](https://github.com/jianghoucheng/AlphaEdit): Junfeng Fang et al. Locate then Edit
+  - [GRACE](https://github.com/thartvigsen/grace): Thomas Hartvigsen et al. Memory-based
+  - [WISE](https://github.com/zjunlp/EasyEdit): Peng Wang et al. Memory-based
+  - [IKE](https://github.com/Zce1112zslx/IKE): Ce Zheng et al. In-context learning
 
 
 ### Running the evaluation
-After downloading the datasets and models, to get started (e.g. using FT to edit GPT-2 XL on BAKE-Q&J dataset), run:
+After downloading the datasets and models, to get started (e.g. using ROME to edit LLaMA-3 (8B) on BAKE-Q&J dataset), run:
 ```bash
 python bir.py \
-    --alg_name=FT \
-    --model_name=gpt2-xl \
-    --ds_name=bi_cf_qa \
-    --cuda=0 \
+    --alg_name=ROME \
+    --model_name=llama3-8b \
+    --ds_name=BAKE_qa \
     --dataset_size=100 (optional)
-```
-
-
-Results from each run are stored at `results/<data_name>/<method_name>/run_<run_id>`.
-
-To summarize the results (e.g. using ROME to edit GPT-2 XL on BAKE-Q&J dataset), run:
-
-```bash
-python -m experiments.summarize  --dir_name=bi_cf_qa/ROME/gpt2-xl
 ```
 
 All params are in the `hparams/<method_name>/`, and you can change them as needed.
 
 For ROME and MEMIT, we also provide Wikipedia stats [[Google Drive]](https://drive.google.com/file/d/1DrHW5rQ3_0rNHSsH2vFBtv7ePGNHiVj7/view?usp=drive_link).
+
+### Running the IKE method
+To use the IKE method, run:
+```bash
+python bir_ike.py \
+    --model_name=llama3-8b \
+    --ds_name=BAKE_qa \
+    --dataset_size=100 (optional)
+```
 
 ### Trainer
 To use the MEND method, you should firstly train a hypernetwork using the data in `data/bi/`, and these weights would be saved in `data/weights/models/MEND/`.
