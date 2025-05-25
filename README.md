@@ -57,7 +57,7 @@ The performance of knowledge editing is measured from these dimensions:
 - `Locality`: whether the output of the edited models for inputs out of editing scope remains unchanged after editing
 - `Reversibility`: the effectiveness of edited models in recalling the editing knowledge under reverse prompts.
 
-GPT-2 XL (1.5B), GPT-J (6B), LLaMA-1 (7B) and LLaMA-2 (7B) are used for editing.
+GPT-2 XL (1.5B), GPT-J (6B), LLaMA-2 (7B), LLaMA-3 (8B) and LLaMA-2 (13B) are used for editing.
 
 - These model editing methods are used in our paper as follows:
   - [FT](https://github.com/kmeng01/rome): Fine-Tuning with $L_\infty$ constraint
